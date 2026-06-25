@@ -2,103 +2,128 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>王国守卫战 - 塔防游戏</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap');
         
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+            touch-action: none;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+        }
         
         body {
             font-family: 'Noto Sans SC', sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             color: #fff;
-            overflow: hidden;
+        }
+        
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         
         #game-container {
             position: relative;
-            margin-top: 10px;
             box-shadow: 0 0 40px rgba(0,0,0,0.5);
             border-radius: 8px;
             overflow: hidden;
+            flex-shrink: 0;
         }
         
         canvas {
             display: block;
             background: #2d5a27;
-            cursor: crosshair;
+            touch-action: none;
         }
         
-        /* UI面板 */
+        /* UI面板 - 响应式高度 */
         #ui-panel {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 60px;
-            background: rgba(0,0,0,0.7);
+            height: 50px;
+            background: rgba(0,0,0,0.85);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 10px;
             z-index: 10;
+            font-size: 14px;
         }
         
         .stat-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 16px;
+            gap: 4px;
             font-weight: bold;
+            white-space: nowrap;
         }
         
         .stat-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
+            font-size: 16px;
         }
         
         #wave-btn {
-            padding: 8px 24px;
+            padding: 6px 12px;
             background: #e94560;
             border: none;
             border-radius: 6px;
             color: white;
-            font-size: 16px;
+            font-size: 13px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s;
+            white-space: nowrap;
+            min-height: 36px;
+            min-width: 80px;
         }
         
-        #wave-btn:hover:not(:disabled) { background: #ff6b6b; transform: scale(1.05); }
-        #wave-btn:disabled { background: #666; cursor: not-allowed; }
+        #wave-btn:hover:not(:disabled) { background: #ff6b6b; }
+        #wave-btn:disabled { background: #666; cursor: not-allowed; opacity: 0.7; }
         
-        /* 塔选择面板 */
+        /* 塔选择面板 - 响应式 */
         #tower-panel {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 100px;
-            background: rgba(0,0,0,0.8);
+            height: 90px;
+            background: rgba(0,0,0,0.9);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 15px;
-            padding: 0 20px;
+            gap: 8px;
+            padding: 0 5px;
             z-index: 10;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         .tower-card {
-            width: 80px;
+            min-width: 65px;
             height: 80px;
             background: rgba(255,255,255,0.1);
             border: 2px solid rgba(255,255,255,0.2);
@@ -110,18 +135,20 @@
             cursor: pointer;
             transition: all 0.2s;
             position: relative;
+            flex-shrink: 0;
+            padding: 2px;
         }
         
-        .tower-card:hover { 
+        .tower-card:hover, .tower-card:active { 
             background: rgba(255,255,255,0.2); 
-            transform: translateY(-5px);
+            transform: scale(1.05);
             border-color: #ffd700;
         }
         
         .tower-card.selected {
             border-color: #ffd700;
             background: rgba(255,215,0,0.2);
-            box-shadow: 0 0 20px rgba(255,215,0,0.3);
+            box-shadow: 0 0 15px rgba(255,215,0,0.3);
         }
         
         .tower-card.disabled {
@@ -130,8 +157,8 @@
         }
         
         .tower-icon {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid #fff;
@@ -139,13 +166,13 @@
         }
         
         .tower-cost {
-            font-size: 12px;
+            font-size: 11px;
             color: #ffd700;
             font-weight: bold;
         }
         
         .tower-name {
-            font-size: 11px;
+            font-size: 10px;
             color: #ccc;
         }
         
@@ -153,43 +180,89 @@
         #overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 100;
+            padding: 20px;
         }
         
         #overlay.active { display: flex; }
         
         #overlay h2 {
-            font-size: 48px;
-            margin-bottom: 20px;
+            font-size: 32px;
+            margin-bottom: 15px;
             text-shadow: 0 0 20px rgba(255,255,255,0.5);
+            text-align: center;
         }
         
         #overlay p {
-            font-size: 20px;
-            margin-bottom: 30px;
+            font-size: 16px;
+            margin-bottom: 25px;
             color: #ccc;
+            text-align: center;
         }
         
         .overlay-btn {
             padding: 15px 40px;
-            font-size: 20px;
+            font-size: 18px;
             border: none;
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s;
             font-weight: bold;
+            min-height: 50px;
+            min-width: 150px;
         }
         
         #start-btn { background: #4ecca3; color: #1a1a2e; }
-        #start-btn:hover { background: #6ee7b7; transform: scale(1.05); }
+        #start-btn:hover { background: #6ee7b7; }
         
         #restart-btn { background: #e94560; color: white; }
-        #restart-btn:hover { background: #ff6b6b; transform: scale(1.05); }
+        #restart-btn:hover { background: #ff6b6b; }
+        
+        /* 升级/出售菜单 */
+        #tower-menu {
+            position: absolute;
+            background: rgba(0,0,0,0.95);
+            padding: 15px;
+            border-radius: 12px;
+            display: none;
+            z-index: 50;
+            border: 2px solid #ffd700;
+            min-width: 160px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+        
+        .menu-btn {
+            width: 100%;
+            padding: 12px;
+            margin: 6px 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            transition: all 0.2s;
+            min-height: 44px;
+        }
+        
+        .upgrade-btn { background: #4ecca3; color: #1a1a2e; }
+        .upgrade-btn:hover:not(:disabled) { background: #6ee7b7; }
+        .upgrade-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+        
+        .sell-btn { background: #e94560; color: white; }
+        .sell-btn:hover { background: #ff6b6b; }
+        
+        .menu-info {
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        
+        .menu-info .level { color: #ffd700; font-weight: bold; font-size: 16px; }
         
         /* 提示信息 */
         #tooltip {
@@ -205,152 +278,226 @@
             max-width: 200px;
         }
         
-        #tooltip .tt-title { color: #ffd700; font-weight: bold; margin-bottom: 5px; }
-        #tooltip .tt-stat { color: #aaa; margin: 2px 0; }
-        
-        /* 升级/出售菜单 */
-        #tower-menu {
-            position: absolute;
-            background: rgba(0,0,0,0.9);
-            padding: 15px;
-            border-radius: 10px;
+        /* 横屏提示 */
+        #orientation-hint {
             display: none;
-            z-index: 50;
-            border: 2px solid #ffd700;
-            min-width: 180px;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #1a1a2e;
+            z-index: 200;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
         
-        .menu-btn {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.2s;
+        #orientation-hint.active { display: flex; }
+        
+        #orientation-hint .phone-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+            animation: rotate 2s infinite;
         }
         
-        .upgrade-btn { background: #4ecca3; color: #1a1a2e; }
-        .upgrade-btn:hover:not(:disabled) { background: #6ee7b7; }
-        .upgrade-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
-        
-        .sell-btn { background: #e94560; color: white; }
-        .sell-btn:hover { background: #ff6b6b; }
-        
-        .menu-info {
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 14px;
+        @keyframes rotate {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
         }
         
-        .menu-info .level { color: #ffd700; font-weight: bold; }
-        
-        /* 塔头像显示 */
-        .tower-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #fff;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
+        /* 小屏幕优化 */
+        @media (max-width: 400px) {
+            #ui-panel { height: 45px; font-size: 12px; }
+            .stat-icon { font-size: 14px; }
+            #wave-btn { padding: 5px 10px; font-size: 12px; min-height: 32px; }
+            #tower-panel { height: 80px; gap: 6px; }
+            .tower-card { min-width: 58px; height: 70px; }
+            .tower-icon { width: 32px; height: 32px; }
+            .tower-cost { font-size: 10px; }
+            .tower-name { font-size: 9px; }
         }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="gameCanvas" width="900" height="650"></canvas>
-        
-        <!-- 顶部状态栏 -->
-        <div id="ui-panel">
-            <div class="stat-item">
-                <span class="stat-icon">❤️</span>
-                <span id="lives">20</span>
+    <!-- 横屏提示 -->
+    <div id="orientation-hint">
+        <div class="phone-icon">📱</div>
+        <h3>请横屏游玩</h3>
+        <p>请将手机旋转90度以获得最佳游戏体验</p>
+    </div>
+
+    <div id="game-wrapper">
+        <div id="game-container">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- 顶部状态栏 -->
+            <div id="ui-panel">
+                <div class="stat-item">
+                    <span class="stat-icon">❤️</span>
+                    <span id="lives">20</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">💰</span>
+                    <span id="gold">150</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🌊</span>
+                    <span id="wave">第1波</span>
+                </div>
+                <button id="wave-btn" onclick="game.startWave()">开始下一波</button>
             </div>
-            <div class="stat-item">
-                <span class="stat-icon">💰</span>
-                <span id="gold">150</span>
+            
+            <!-- 底部塔选择 -->
+            <div id="tower-panel">
+                <div class="tower-card" data-type="arrow" onclick="game.selectTower('arrow')">
+                    <img src="tower_arrow.png" class="tower-icon" alt="箭塔">
+                    <div class="tower-name">箭塔</div>
+                    <div class="tower-cost">50</div>
+                </div>
+                <div class="tower-card" data-type="cannon" onclick="game.selectTower('cannon')">
+                    <img src="tower_cannon.png" class="tower-icon" alt="炮塔">
+                    <div class="tower-name">炮塔</div>
+                    <div class="tower-cost">100</div>
+                </div>
+                <div class="tower-card" data-type="ice" onclick="game.selectTower('ice')">
+                    <img src="tower_ice.png" class="tower-icon" alt="冰塔">
+                    <div class="tower-name">冰塔</div>
+                    <div class="tower-cost">80</div>
+                </div>
+                <div class="tower-card" data-type="electric" onclick="game.selectTower('electric')">
+                    <img src="tower_electric.png" class="tower-icon" alt="电塔">
+                    <div class="tower-name">电塔</div>
+                    <div class="tower-cost">120</div>
+                </div>
+                <div class="tower-card" data-type="laser" onclick="game.selectTower('laser')">
+                    <img src="tower_laser.png" class="tower-icon" alt="激光">
+                    <div class="tower-name">激光</div>
+                    <div class="tower-cost">200</div>
+                </div>
             </div>
-            <div class="stat-item">
-                <span class="stat-icon">🌊</span>
-                <span id="wave">第 1 波</span>
+            
+            <!-- 开始/结束覆盖层 -->
+            <div id="overlay" class="active">
+                <h2>王国守卫战</h2>
+                <p>建造防御塔，抵御怪物入侵！</p>
+                <button id="start-btn" class="overlay-btn" onclick="game.start()">开始游戏</button>
             </div>
-            <div class="stat-item">
-                <span class="stat-icon">👹</span>
-                <span id="enemies">0</span>
+            
+            <!-- 提示框 -->
+            <div id="tooltip"></div>
+            
+            <!-- 塔菜单 -->
+            <div id="tower-menu">
+                <div class="menu-info">
+                    <div class="level" id="menu-level">等级 1</div>
+                    <div id="menu-damage">伤害: 10</div>
+                </div>
+                <button class="menu-btn upgrade-btn" id="upgrade-btn" onclick="game.upgradeTower()">
+                    升级 (<span id="upgrade-cost">50</span>)
+                </button>
+                <button class="menu-btn sell-btn" onclick="game.sellTower()">
+                    出售 (+<span id="sell-price">25</span>)
+                </button>
             </div>
-            <button id="wave-btn" onclick="game.startWave()">开始下一波</button>
-        </div>
-        
-        <!-- 底部塔选择 -->
-        <div id="tower-panel">
-            <div class="tower-card" data-type="arrow" onclick="game.selectTower('arrow')">
-                <img src="tower_arrow.png" class="tower-icon" alt="箭塔">
-                <div class="tower-name">箭塔</div>
-                <div class="tower-cost">50金币</div>
-            </div>
-            <div class="tower-card" data-type="cannon" onclick="game.selectTower('cannon')">
-                <img src="tower_cannon.png" class="tower-icon" alt="炮塔">
-                <div class="tower-name">炮塔</div>
-                <div class="tower-cost">100金币</div>
-            </div>
-            <div class="tower-card" data-type="ice" onclick="game.selectTower('ice')">
-                <img src="tower_ice.png" class="tower-icon" alt="冰塔">
-                <div class="tower-name">冰塔</div>
-                <div class="tower-cost">80金币</div>
-            </div>
-            <div class="tower-card" data-type="electric" onclick="game.selectTower('electric')">
-                <img src="tower_electric.png" class="tower-icon" alt="电塔">
-                <div class="tower-name">电塔</div>
-                <div class="tower-cost">120金币</div>
-            </div>
-            <div class="tower-card" data-type="laser" onclick="game.selectTower('laser')">
-                <img src="tower_laser.png" class="tower-icon" alt="激光">
-                <div class="tower-name">激光</div>
-                <div class="tower-cost">200金币</div>
-            </div>
-        </div>
-        
-        <!-- 开始/结束覆盖层 -->
-        <div id="overlay" class="active">
-            <h2>王国守卫战</h2>
-            <p>建造防御塔，抵御怪物入侵！</p>
-            <button id="start-btn" class="overlay-btn" onclick="game.start()">开始游戏</button>
-        </div>
-        
-        <!-- 提示框 -->
-        <div id="tooltip"></div>
-        
-        <!-- 塔菜单 -->
-        <div id="tower-menu">
-            <div class="menu-info">
-                <div class="level" id="menu-level">等级 1</div>
-                <div id="menu-damage">伤害: 10</div>
-            </div>
-            <button class="menu-btn upgrade-btn" id="upgrade-btn" onclick="game.upgradeTower()">
-                升级 (<span id="upgrade-cost">50</span>金币)
-            </button>
-            <button class="menu-btn sell-btn" onclick="game.sellTower()">
-                出售 (+<span id="sell-price">25</span>金币)
-            </button>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // 游戏配置
+        // 响应式画布配置
+        const BASE_WIDTH = 900;
+        const BASE_HEIGHT = 650;
         const TILE_SIZE = 50;
         const COLS = 18;
         const ROWS = 13;
         
-        // 路径定义 (格子坐标)
+        let canvas, ctx;
+        let scale = 1;
+        let canvasWidth, canvasHeight;
+        
+        function initCanvas() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(resizeCanvas, 300);
+            });
+        }
+        
+        function resizeCanvas() {
+            const wrapper = document.getElementById('game-wrapper');
+            const container = document.getElementById('game-container');
+            const uiPanel = document.getElementById('ui-panel');
+            const towerPanel = document.getElementById('tower-panel');
+            
+            // 计算可用空间
+            const availWidth = wrapper.clientWidth;
+            const availHeight = wrapper.clientHeight;
+            
+            // 计算缩放比例，保持宽高比
+            const scaleX = availWidth / BASE_WIDTH;
+            const scaleY = availHeight / BASE_HEIGHT;
+            scale = Math.min(scaleX, scaleY, 1); // 最大不放大
+            
+            canvasWidth = BASE_WIDTH * scale;
+            canvasHeight = BASE_HEIGHT * scale;
+            
+            // 设置画布实际像素大小（处理高清屏）
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+            ctx.scale(dpr * scale, dpr * scale);
+            
+            // 调整容器大小
+            container.style.width = canvasWidth + 'px';
+            container.style.height = canvasHeight + 'px';
+            
+            // 调整UI面板
+            uiPanel.style.height = (50 * scale) + 'px';
+            uiPanel.style.padding = `0 ${10 * scale}px`;
+            
+            towerPanel.style.height = (90 * scale) + 'px';
+            towerPanel.style.gap = (8 * scale) + 'px';
+            
+            // 调整塔卡片
+            document.querySelectorAll('.tower-card').forEach(card => {
+                card.style.minWidth = (65 * scale) + 'px';
+                card.style.height = (80 * scale) + 'px';
+            });
+            
+            document.querySelectorAll('.tower-icon').forEach(icon => {
+                icon.style.width = (36 * scale) + 'px';
+                icon.style.height = (36 * scale) + 'px';
+            });
+            
+            // 检查横屏
+            checkOrientation();
+        }
+        
+        function checkOrientation() {
+            const hint = document.getElementById('orientation-hint');
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const isMobile = window.innerWidth < 768;
+            
+            if (isMobile && isPortrait) {
+                hint.classList.add('active');
+            } else {
+                hint.classList.remove('active');
+            }
+        }
+        
+        // 坐标转换：屏幕坐标 -> 游戏坐标
+        function toGameCoord(screenX, screenY) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (screenX - rect.left) / scale,
+                y: (screenY - rect.top) / scale
+            };
+        }
+        
+        // 路径定义
         const PATH = [
             {x: 0, y: 2}, {x: 1, y: 2}, {x: 2, y: 2}, {x: 3, y: 2},
             {x: 3, y: 3}, {x: 3, y: 4}, {x: 3, y: 5},
@@ -519,7 +666,6 @@
                 if (img && img.complete) {
                     ctx.drawImage(img, this.x - size * 0.8, this.y - size * 0.8, size * 1.6, size * 1.6);
                 } else {
-                    // 备用：用颜色填充
                     ctx.fillStyle = this.color;
                     ctx.fillRect(this.x - size, this.y - size, size * 2, size * 2);
                 }
@@ -987,10 +1133,20 @@
             
             showTowerMenu(tower) {
                 const menu = document.getElementById('tower-menu');
+                const gameRect = document.getElementById('game-container').getBoundingClientRect();
+                
+                // 计算菜单位置（相对于游戏容器）
+                let menuX = tower.x * scale + 30;
+                let menuY = tower.y * scale - 50;
+                
+                // 防止超出边界
+                if (menuX + 180 > canvasWidth) menuX = tower.x * scale - 190;
+                if (menuY + 150 > canvasHeight) menuY = canvasHeight - 160;
+                if (menuY < 60) menuY = 60;
                 
                 menu.style.display = 'block';
-                menu.style.left = (tower.x + 30) + 'px';
-                menu.style.top = (tower.y - 50) + 'px';
+                menu.style.left = menuX + 'px';
+                menu.style.top = menuY + 'px';
                 
                 document.getElementById('menu-level').textContent = `等级 ${tower.level}`;
                 document.getElementById('menu-damage').textContent = `伤害: ${tower.damage}`;
@@ -1012,52 +1168,81 @@
             }
             
             setupInput() {
-                canvas.addEventListener('click', (e) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const gridX = Math.floor(x / TILE_SIZE);
-                    const gridY = Math.floor(y / TILE_SIZE);
-                    
-                    let clickedTower = null;
-                    for (const t of this.towers) {
-                        const tx = Math.floor(t.x / TILE_SIZE);
-                        const ty = Math.floor(t.y / TILE_SIZE);
-                        if (tx === gridX && ty === gridY) {
-                            clickedTower = t;
-                            break;
-                        }
-                    }
-                    
-                    if (clickedTower) {
-                        this.selectedTower = clickedTower;
-                        this.selectedTowerType = null;
-                        this.placingTower = false;
-                        this.updateTowerPanel();
-                        this.showTowerMenu(clickedTower);
-                        return;
-                    }
-                    
-                    if (this.placingTower && this.selectedTowerType) {
-                        this.placeTower(gridX, gridY);
-                    } else {
-                        this.selectedTower = null;
-                        this.hideTowerMenu();
-                    }
-                });
-                
+                // 鼠标事件
+                canvas.addEventListener('click', (e) => this.handleInput(e.clientX, e.clientY));
                 canvas.addEventListener('mousemove', (e) => {
-                    const rect = canvas.getBoundingClientRect();
-                    this.mouseX = e.clientX - rect.left;
-                    this.mouseY = e.clientY - rect.top;
+                    const coord = toGameCoord(e.clientX, e.clientY);
+                    this.mouseX = coord.x;
+                    this.mouseY = coord.y;
                 });
                 
+                // 触摸事件（手机）
+                canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    this.handleInput(touch.clientX, touch.clientY);
+                }, { passive: false });
+                
+                canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const coord = toGameCoord(touch.clientX, touch.clientY);
+                    this.mouseX = coord.x;
+                    this.mouseY = coord.y;
+                }, { passive: false });
+                
+                // 右键取消建造
                 canvas.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     this.selectedTowerType = null;
                     this.placingTower = false;
                     this.updateTowerPanel();
                 });
+                
+                // 防止页面滚动和缩放
+                document.addEventListener('touchmove', (e) => {
+                    if (e.target === canvas) e.preventDefault();
+                }, { passive: false });
+                
+                document.addEventListener('gesturestart', (e) => e.preventDefault());
+                document.addEventListener('gesturechange', (e) => e.preventDefault());
+                document.addEventListener('gestureend', (e) => e.preventDefault());
+            }
+            
+            handleInput(clientX, clientY) {
+                const coord = toGameCoord(clientX, clientY);
+                const x = coord.x;
+                const y = coord.y;
+                const gridX = Math.floor(x / TILE_SIZE);
+                const gridY = Math.floor(y / TILE_SIZE);
+                
+                // 检查是否点击了已有塔
+                let clickedTower = null;
+                for (const t of this.towers) {
+                    const tx = Math.floor(t.x / TILE_SIZE);
+                    const ty = Math.floor(t.y / TILE_SIZE);
+                    if (tx === gridX && ty === gridY) {
+                        clickedTower = t;
+                        break;
+                    }
+                }
+                
+                if (clickedTower) {
+                    this.selectedTower = clickedTower;
+                    this.selectedTowerType = null;
+                    this.placingTower = false;
+                    this.updateTowerPanel();
+                    this.showTowerMenu(clickedTower);
+                    return;
+                }
+                
+                // 建造新塔
+                if (this.placingTower && this.selectedTowerType) {
+                    this.placeTower(gridX, gridY);
+                } else {
+                    this.selectedTower = null;
+                    this.hideTowerMenu();
+                }
             }
             
             updateTowerPanel() {
@@ -1080,14 +1265,14 @@
             updateUI() {
                 document.getElementById('lives').textContent = this.lives;
                 document.getElementById('gold').textContent = this.gold;
-                document.getElementById('wave').textContent = `第 ${this.wave} 波`;
+                document.getElementById('wave').textContent = `第${this.wave}波`;
                 document.getElementById('enemies').textContent = this.enemies.filter(e => e.alive).length;
                 
                 const waveBtn = document.getElementById('wave-btn');
                 if (this.wave >= WAVES.length && !this.waveActive) {
                     waveBtn.textContent = '无尽模式';
                 } else {
-                    waveBtn.textContent = this.waveActive ? '波次进行中...' : '开始下一波';
+                    waveBtn.textContent = this.waveActive ? '战斗中' : '开始下一波';
                 }
                 waveBtn.disabled = this.waveActive;
                 
@@ -1137,11 +1322,11 @@
             }
             
             draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.clearRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
                 
                 // 绘制草地背景
                 ctx.fillStyle = '#2d5a27';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
                 
                 // 绘制网格
                 ctx.strokeStyle = 'rgba(255,255,255,0.05)';
@@ -1149,13 +1334,13 @@
                 for (let x = 0; x <= COLS; x++) {
                     ctx.beginPath();
                     ctx.moveTo(x * TILE_SIZE, 0);
-                    ctx.lineTo(x * TILE_SIZE, canvas.height);
+                    ctx.lineTo(x * TILE_SIZE, BASE_HEIGHT);
                     ctx.stroke();
                 }
                 for (let y = 0; y <= ROWS; y++) {
                     ctx.beginPath();
                     ctx.moveTo(0, y * TILE_SIZE);
-                    ctx.lineTo(canvas.width, y * TILE_SIZE);
+                    ctx.lineTo(BASE_WIDTH, y * TILE_SIZE);
                     ctx.stroke();
                 }
                 
@@ -1186,6 +1371,13 @@
                 ctx.fillRect(start.x * TILE_SIZE, start.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 ctx.fillStyle = '#e74c3c';
                 ctx.fillRect(end.x * TILE_SIZE, end.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                
+                // 起点终点标记
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('起点', start.x * TILE_SIZE + TILE_SIZE/2, start.y * TILE_SIZE + TILE_SIZE/2 + 5);
+                ctx.fillText('终点', end.x * TILE_SIZE + TILE_SIZE/2, end.y * TILE_SIZE + TILE_SIZE/2 + 5);
                 
                 // 绘制塔
                 for (const tower of this.towers) {
@@ -1242,8 +1434,11 @@
             }
         }
         
-        // 启动游戏
+        // 初始化
+        initCanvas();
         const game = new Game();
     </script>
+</body>
+</html>
 </body>
 </html>
